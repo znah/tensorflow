@@ -2150,7 +2150,7 @@ var TF;
   </script>
 </dom-module>
 
-<dom-module id="tf-histogram-dashboard" assetpath="../tf-histogram-dashboard/">
+<dom-module id="tf-compressed-histogram-dashboard" assetpath="../tf-compressed-histogram-dashboard/">
   <template>
     <div id="plumbing">
       <tf-url-generator router="[[router]]" out-runs-url="{{runsUrl}}" out-compressed-histograms-url-generator="{{compressedHistogramsUrlGen}}" id="urlGenerator"></tf-url-generator>
@@ -2218,7 +2218,7 @@ var TF;
 
   <script>
     Polymer({
-      is: "tf-histogram-dashboard",
+      is: "tf-compressed-histogram-dashboard",
       properties: {
         _runs: {
           type: Array,
@@ -10887,7 +10887,7 @@ Polymer({
         </template>
 
         <template is="dom-if" if="[[histogramDashboard(mode)]]">
-          <tf-histogram-dashboard id="histogramDash" router="[[router]]"></tf-histogram-dashboard>
+          <tf-compressed-histogram-dashboard id="histogramDash" router="[[router]]"></tf-compressed-histogram-dashboard>
         </template>
       </div>
     </paper-header-panel>

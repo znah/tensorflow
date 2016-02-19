@@ -4,7 +4,7 @@
 <link rel="import" href="../paper-button/paper-button.html">
 <link rel="import" href="../paper-header-panel/paper-header-panel.html">
 <link rel="import" href="../tf-event-dashboard/tf-event-dashboard.html">
-<link rel="import" href="../tf-histogram-dashboard/tf-histogram-dashboard.html">
+<link rel="import" href="../tf-compressed-histogram-dashboard/tf-compressed-histogram-dashboard.html">
 <link rel="import" href="../tf-image-dashboard/tf-image-dashboard.html">
 <link rel="import" href="../tf-graph-dashboard/tf-graph-dashboard.html">
 <link rel="import" href="../tf-dashboard-common/tensorboard-color.html">
@@ -24,7 +24,7 @@ allows the user to toggle between various dashboards.
             <paper-tab data-mode="events" on-click="changeMode">Events</paper-tab>
             <paper-tab data-mode="images" on-click="changeMode">Images</paper-tab>
             <paper-tab data-mode="graphs" on-click="changeMode">Graph</paper-tab>
-            <paper-tab data-mode="histograms" on-click="changeMode">Histograms</paper-tab>
+            <paper-tab data-mode="compressedHistograms" on-click="changeMode">CHisto</paper-tab>
           </paper-tabs>
         </div>
       </paper-toolbar>
@@ -50,11 +50,11 @@ allows the user to toggle between various dashboards.
           ></tf-graph-dashboard>
         </template>
 
-        <template is="dom-if" if="[[histogramDashboard(mode)]]">
-          <tf-histogram-dashboard
+        <template is="dom-if" if="[[compressedHistograms(mode)]]">
+          <tf-compressed-histogram-dashboard
             id="histogramDash"
             router="[[router]]"
-          ></tf-histogram-dashboard>
+          ></tf-compressed-histogram-dashboard>
         </template>
       </div>
     </paper-header-panel>
@@ -129,8 +129,8 @@ allows the user to toggle between various dashboards.
       graphDashboard: function(mode) {
         return mode === "graphs";
       },
-      histogramDashboard: function(mode) {
-        return mode === "histograms";
+      compressedHistograms: function(mode) {
+        return mode === "compressedHistograms";
       },
       loadPreviousMode: function() {
         this._changeMode(this._getMode(), false);
