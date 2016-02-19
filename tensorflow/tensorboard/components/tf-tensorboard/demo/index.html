@@ -4,6 +4,7 @@
     <script src="../../webcomponentsjs/webcomponents-lite.min.js"></script>
     <link rel="import" href="../tf-tensorboard.html">
     <link rel="stylesheet" type="text/css" href="../../../lib/css/global.css">
+    <script src="../../../lib/js/backend/urlPathHelpers.js"></script>
     <title>TensorBoard Demo</title>
   </head>
   <body>
@@ -16,12 +17,29 @@
         </tf-tensorboard>
       </template>
       <script>
-        var dataDir = "components/tf-tensorboard/demo/data/";
+
+        var dataDir = "components/tf-tensorboard/demo/giant_data/";
+        function url(route, params) {
+          var q = TF.Backend.UrlPathHelpers.queryEncoder(params);
+          var target = TF.Backend.UrlPathHelpers.clean(route + q);
+          var url = dataDir + target;
+          return url;
+        }
         var demoRouter = {
-          runs: function() { return dataDir + "runs.json";},
-          graph: function(run) {return dataDir + run + "-graph.pbtxt";},
+          runs: function() {
+            return url("runs")
+          },
+          graph: function(run) {
+            return url("graph", {run: run});
+          },
           scalars: function(tag, run) {
-            return dataDir + run.split("_")[0] + ".json";
+            return url("scalars", {tag: tag, run: run});
+          },
+          histograms: function(tag, run) {
+            return url("histograms", {tag: tag, run: run});
+          },
+          compressedHistograms: function(tag, run) {
+            return url("compressedHistograms", {tag: tag, run: run});
           },
         };
         Polymer({
