@@ -92,7 +92,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     is: "tf-vz-histogram-series",
     properties: {
       mode: { type: String, value: "offset" }, //offset|overlay
-      time: { type: String, value: "step" }, //step|wall
+      time: { type: String, value: "wall" }, //step|wall
       width: { type: Number, value: 500 },
       height: { type: Number, value: 500 },
       data: { type: Object, value: [] }
@@ -182,10 +182,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
               .tickSize(width + 5)
               .orient("right");
 
-      var path = d3.svg.line()
+      var path = d3.svg.area()
           .interpolate("linear")
           .x(function(d) { return xLineScale(d.left); })
-          .y(function(d) { return yLineScale(d.area); });
+          .y0(function(d) { return yLineScale(0); })
+          .y1(function(d) { return yLineScale(d.area); });
 
       //
       // Render
@@ -231,9 +232,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       var background = stage.select(".background")
           .attr("transform", "translate(" + -margin.left + "," + -margin.top + ")")
           .attr("width", outerWidth)
-          .attr("height", outerHeight)
+          .attr("height", outerHeight);
 
-      var histogram = stage.selectAll(".histogram").data(data, function(d) { return d[0]; }),
+      var histogram = stage.selectAll(".histogram").data(data, function(d) { return d.step; }),
           histogramExit = histogram.exit().remove(),
           histogramEnter = histogram.enter().append("g").attr("class", "histogram"),
           histogramUpdate = histogram

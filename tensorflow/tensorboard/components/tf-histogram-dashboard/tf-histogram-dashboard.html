@@ -35,9 +35,13 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
       .category {
         border-top: solid 1px #ccc;
         margin: 20px 0;
+        overflow: hidden;
+        background: white;
       }
       .chart {
-        color: red;
+        color: black;
+        width: 400px;
+        float: left;
       }
     </style>
 
@@ -80,7 +84,6 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
       </div>
     </tf-dashboard-layout>
 
-    <style include="histogram-style"></style>
     <style include="dashboard-style"></style>
     <style include="warning-style"></style>
   </template>
