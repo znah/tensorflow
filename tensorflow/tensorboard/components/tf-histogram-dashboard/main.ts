@@ -1,7 +1,7 @@
 var rm = new TF.Backend.RequestManager();
 var backend = new TF.Backend.Backend("/components/tf-tensorboard/demo/giant_data", rm, true);
 
-function makeHistogramDashboard(el: any) {
+function makeHistogramDashboard(el: any, elScope: any) {
 
 
   var chartsContainer: d3.Selection<HCategory> = d3.select(el);
@@ -43,14 +43,21 @@ function makeHistogramDashboard(el: any) {
     var d3category = chartsContainer.selectAll(".category")
         .data(hcats)
       .enter().append("div")
-          .classed("category", true);
+        .classed("category", true);
 
     var d3chart = d3category.selectAll(".chart")
         .data((d) => d.runTags)
       .enter().append("div")
         .classed("chart", true);
-    d3chart.append("p").text((d: RunTag) => d.run + " " + d.tag);
+
+    d3chart.append("div")
+        .text((d: RunTag) => d.run + " " + d.tag);
+
+    d3chart.append("tf-vz-histogram-series")
+
     console.log(hcats);
+    // This adds the css scoping necessary for the new elements
+    elScope.scopeSubtree(elScope.$.container, false);
   });
 
 }
