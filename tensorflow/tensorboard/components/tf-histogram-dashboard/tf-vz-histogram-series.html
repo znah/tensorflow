@@ -46,7 +46,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       .outline {
         fill: none;
         stroke: white;
-        stroke-opacity: 0.7;
+        stroke-opacity: 0.5;
+        /*stroke-alignment: outer;*/
+        /*not implemented?*/
       }
 
       .gradient {
@@ -78,6 +80,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <g class="axis x"></g>
         <g class="axis y"></g>
         <g class="axis y slice"></g>
+        <g class="x-axis-hover"></g>
         <g class="stage">
           <rect class="background"></rect>
         </g>
@@ -219,6 +222,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             function hoverXIndex(d) {
               return Math.min(d.histogramData.length -1, bisect(d.histogramData, v));
             }
+
+            xAxisHover
+                .text(v)
+                .attr("transform", "translate(10, " + (height + 10) + ")");
+
             hoverUpdate
               .attr("transform", function(d) {
                 var index = hoverXIndex(d);
@@ -258,9 +266,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
               .style("stroke-width", 1),
           outlineTransition = histogramTransition.select(".outline")
               .attr("transform", "scale(" + width / outlineCanvasSize + ", " + sliceHeight / outlineCanvasSize + ")")
-              .style("stroke", function(d) { return (mode === "" ? "white" : outlineColor(d[time])); })
+              .style("stroke", function(d) { return (mode === "offset" ? "white" : outlineColor(d[time])); })
               .style("fill-opacity", function(d) { return (mode === "offset" ? 1 : 0); })
-              .style("fill", function(d) { return "white"; outlineColor(d[time]); });
+              .style("fill", function(d) { return outlineColor(d[time]); });
+
 
       var hoverEnter = histogramEnter.append("g")
               .attr("class", "hover")
@@ -277,6 +286,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       hoverEnter.append("text")
           .attr("dx", 4);
+
+      var xAxisHover = g.select(".x-axis-hover");
 
       gTransition.select(".y.axis.slice")
           .style("opacity", mode === "offset" ? 0 : 1)

@@ -3,7 +3,6 @@ var backend = new TF.Backend.Backend("/components/tf-tensorboard/demo/giant_data
 
 function makeHistogramDashboard(el: any, elScope: any) {
 
-
   var chartsContainer: d3.Selection<HCategory> = d3.select(el);
 
   interface RunTag {
@@ -113,7 +112,7 @@ function makeHistogramDashboard(el: any, elScope: any) {
           return bin;
         });
 
-        // TODO remove
+        // TODO rebin and remove this...
         dd.histogramData = dd.histogramData.filter(function(d) { return (d.right - d.left) > 0.0035; })
 
 
@@ -126,8 +125,6 @@ function makeHistogramDashboard(el: any, elScope: any) {
       return data.filter(function(d) { return d.step; });//TODO Bad
     }
 
-
-    // console.log(hcats);
     // This adds the css scoping necessary for the new elements
     elScope.scopeSubtree(elScope.$.container, false);
   });
