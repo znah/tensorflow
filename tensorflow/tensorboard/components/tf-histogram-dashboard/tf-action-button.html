@@ -1,0 +1,37 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-icon/iron-icon.html">
+
+<dom-module id="tf-action-button">
+
+  <template>
+
+    <style is="custom-style">
+      :host {
+        display: inline-block;
+        /*display: block;
+        display: flex;
+        margin: 0 -8px;*/
+        font-weight: 400;
+        font-size: 14px;
+        color: var(--paper-grey-600);
+        cursor: pointer;
+      }
+      :host ::content iron-icon {
+        margin-right: 4px;
+      }
+      }
+    </style>
+
+    <div>
+      <content></content>
+    </div>
+
+  </template>
+
+  <script>
+  Polymer({
+    is: "tf-action-button"
+  });
+  </script>
+
+</dom-module>

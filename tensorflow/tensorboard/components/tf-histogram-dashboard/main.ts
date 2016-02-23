@@ -2,8 +2,65 @@ var rm = new TF.Backend.RequestManager();
 var backend = new TF.Backend.Backend("/components/tf-tensorboard/demo/giant_data", rm, true);
 
 function makeHistogramDashboard(el: any, elScope: any) {
+  var chartWidth = 300,
+      chartHeight = 250;
+
+  var actionsPanel = elScope.$.actions;
+
+  actionsPanel.addEventListener("change", function(e) {
+    var property = e.detail.value.split("=")[0],
+        value = e.detail.value.split("=")[1];
+
+    if (property === "zoom") {
+      if (value === "in") {
+        chartWidth = chartWidth  * 1.5;
+        chartHeight = chartHeight * 1.5;
+      } else if (value === "out") {
+        chartWidth = chartWidth  / 1.5;
+        chartHeight = chartHeight / 1.5;
+      }
+    }
+    var radarResponse = radar.scan();
+    radarResponse.visible.concat(radarResponse.almost.concat(radarResponse.hidden)).forEach(function(n:any) {
+      var chart = histogramChartsByRunTag[n.run + n.tag];
+      chart[property] = value;
+      chart.width = chartWidth;
+      chart.height = chartHeight;
+      chart.dirty = true;
+    });
+    radarResponse.visible.forEach(function(n:any) {
+      var chart = histogramChartsByRunTag[n.run + n.tag];
+      chart.draw(1000);
+      chart.dirty = false;
+    });
+  })
 
   var chartsContainer: d3.Selection<HCategory> = d3.select(el);
+  var frame = el.parentElement.parentElement;
+  var radar = new TF.NodeRadar(frame);
+  var histogramChartsByRunTag = {}; //dictionary to find chart nodes from noderadar values.
+
+  // Scanning
+  setInterval(function() {
+    console.log("Scanning");
+    var response = radar.scan();
+    response.almost.concat(response.visible).forEach(function(n:any) {
+      var c = histogramChartsByRunTag[n.run + n.tag];
+      if (c.dirty) {
+        c.draw();
+        c.dirty = false;
+      }
+      if (!c.dataRequested) {
+        console.log("requesting")
+        backend.histograms(n.run, n.tag).then(function(data) {
+          c.data = processData(data);
+          c.dirty = true;
+          c.dataLoaded;
+        });
+      }
+      c.dataRequested = true;
+    })
+  }, 500);
 
   interface RunTag {
     run: string;
@@ -39,94 +96,106 @@ function makeHistogramDashboard(el: any, elScope: any) {
 
   backend.runs().then((x) => {
     var hcats = histogramCategories(x);
-    var d3category = chartsContainer.selectAll(".category")
-        .data(hcats)
-      .enter().append("div")
-        .classed("category", true);
 
-    var d3chart = d3category.selectAll(".chart")
-        .data((d) => d.runTags)
-      .enter().append("div")
-        .classed("chart", true);
+    var runsByTagByCategory = hcats.map(function(d: any) {
+      d.runsByTag = d3.nest()
+          .key(function(d: any) { return d.tag; })
+          .entries(d.runTags);
+      console.log(d.runsByTag)
+      return d;
+    })
 
-    d3chart.append("div")
-        .text((d: RunTag) => d.run + " " + d.tag);
+    console.log(hcats);
+    var category = chartsContainer.selectAll(".category").data(hcats, (d: any) => d.name),
+        categoryExit = category.exit().remove(),
+        categoryEnter = category.enter().append("div").attr("class", "category"),
+        categoryUpdate = category
+            .style("position", "relative");
 
-    var test = d3chart.append("tf-vz-histogram-series");
+    categoryEnter.append("h3")
+        .text((d) => d.name);
 
-    test.each(function(d:any, i) {
+    var tag = categoryUpdate.selectAll(".tag").data((d: any) => d.runsByTag, (d: any) => d.key),
+        tagExit = tag.exit().remove(),
+        tagEnter = tag.enter().append("div").attr("class", "tag"),
+        tagUpdate = tag;
+
+    tagUpdate.append("h4")
+        .text((d) => d.key)
+
+    var run = tagUpdate.selectAll(".run").data((d: any) => d.values, (d: any) => d.run),
+        runExit = run.exit().remove(),
+        runEnter = run.enter().append("div").attr("class", "run"),
+        runUpdate = run
+            .style("width", chartWidth + "px")
+            .style("height", chartHeight + "px");
+
+    run.append("h5")
+        .text((d: any) => d.run);
+
+    console.time("histogram enter");
+    var histogramEnter = runEnter.append("tf-vz-histogram-series"),
+        histogramUpdate = runUpdate.select("tf-vz-histogram-series");
+
+    histogramUpdate.each(function(d:any) {
+      histogramChartsByRunTag[d.run + d.tag] = this;
       var c = this;
-      c.width = 400;
-      c.height = 230;
-      c.draw();
-      if (i < 5) {
-        backend.histograms(d.run, d.tag).then(function(data) {
-          c.data = processData(data);
-          c.draw();
-        })
-      }
+      c.width = chartWidth;
+      c.height = chartHeight;
+      radar.add(this, d);
     });
-
-    function processData(data: any) {
-      // bucketCounts: Array[143]
-      // bucketRightEdges: Array[143]
-      // max: 16.746273040771484
-      // min: 0
-      // nItems: 512000
-      // step: undefined
-      // sum: 68274.20579528809
-      // sumSquares: 119526.37719496872
-      // wall: NaN
-      // wallDate: Invalid Date
-      // wall_time: Fri Jan 29 2016 19:06:24 GMT-0800 (PST)
-      data.forEach(function(dd: any) {
-        var prev = null;
-        // dd.wall = +dd[0] * 1000; //TODO is this correct??
-        dd.wallDate = new Date(dd.wall_time);
-        dd.wall = dd.wallDate ? dd.wallDate.valueOf() : null;
-
-        dd.histogramData = dd.bucketRightEdges.map(function(ddd: any, i) {
-          var bin: any = {};
-          var value = (ddd === 0 ? -1e-12 : ddd)
-          if (prev === null) {
-            if (value > 0) {
-              bin.left = (value / 1.1);
-            } else {
-              bin.left = (value * 1.1);
-            }
-          } else {
-            bin.left = prev;
-          }
-          if (value > dd.max) {
-            if (value > 0) {
-              bin.right = bin.left * 1.1;
-            } else {
-              bin.right = bin.left / 1.1;
-            }
-          } else {
-            bin.right = value;
-          }
-          bin.count = dd.bucketCounts[i];
-          bin.area =  bin.count / (bin.right - bin.left);
-          prev = ddd;
-          return bin;
-        });
-
-        // TODO rebin and remove this...
-        dd.histogramData = dd.histogramData.filter(function(d) { return (d.right - d.left) > 0.0035; })
+    console.timeEnd("histogram enter");
 
 
-        dd.binExtent = [dd.min, dd.max];
-        dd.areaMax = d3.max(dd.histogramData, function(d:any) { return d.area; })
-        dd.leftMin = d3.min(dd.histogramData, function(d:any) { return d.left; });
-        dd.rightMax = d3.max(dd.histogramData, function(d:any) { return d.right; });
-        dd.countExtent = d3.extent(dd.histogramData, function(d:any) { return d.count; });
-      });
-      return data.filter(function(d) { return d.step; });//TODO Bad
-    }
 
-    // This adds the css scoping necessary for the new elements
-    elScope.scopeSubtree(elScope.$.container, false);
+    //TODO This adds the css scoping necessary for the new elements
+    elScope.scopeSubtree(elScope.$.content, false);
   });
 
+
+  function processData(data: any) {
+    data.forEach(function(dd: any, i: Number) {
+      var prev = null;
+      dd.wallDate = new Date(dd.wall_time);
+      dd.wall = dd.wallDate ? dd.wallDate.valueOf() : null;
+      dd.i = i;
+      dd.histogramData = dd.bucketRightEdges.map(function(ddd: any, i) {
+        var bin: any = {};
+        var value = (ddd === 0 ? -1e-12 : ddd)
+        if (prev === null) {
+          if (value > 0) {
+            bin.left = (value / 1.1);
+          } else {
+            bin.left = (value * 1.1);
+          }
+        } else {
+          bin.left = prev;
+        }
+        if (value > dd.max) {
+          if (value > 0) {
+            bin.right = bin.left * 1.1;
+          } else {
+            bin.right = bin.left / 1.1;
+          }
+        } else {
+          bin.right = value;
+        }
+        bin.center = (bin.left + bin.right) / 2;
+        bin.count = dd.bucketCounts[i];
+        bin.area =  bin.count / (bin.right - bin.left);
+        prev = ddd;
+        return bin;
+      });
+
+      // TODO rebin and remove this...
+      dd.histogramData = dd.histogramData.filter(function(d) { return (d.right - d.left) > 0.0035; })
+
+      dd.binExtent = [dd.min, dd.max];
+      dd.countExtent = d3.extent(dd.histogramData, function(d:any) { return d.count; });
+      dd.areaMax = d3.max(dd.histogramData, function(d:any) { return d.area; })
+      dd.leftMin = d3.min(dd.histogramData, function(d:any) { return d.left; });
+      dd.rightMax = d3.max(dd.histogramData, function(d:any) { return d.right; });
+    });
+    return data.filter(function(d) { return d.step; }); //TODO Bad, some step values are undefined
+  }
 }

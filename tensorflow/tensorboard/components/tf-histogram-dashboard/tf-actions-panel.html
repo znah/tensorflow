@@ -1,0 +1,101 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../paper-button/paper-button.html">
+<link rel="import" href="../paper-fab/paper-fab.html">
+<link rel="import" href="tf-action-button.html">
+
+
+<!--
+tf-compressed-histogram-dashboard is a complete frontend that loads runs from a backend,
+and creates chart panes that display data for those runs.
+
+It provides a categorizer, run selector, and x type selector, by which the user
+can customize how data is organized and displayed.
+
+Each chart has a button that can toggle whether it is "selected"; selectedRuns
+charts are larger.
+
+Organizationally, the #plumbing div contains components that have no concrete
+manifestation and just effect data bindings or data loading. The #sidebar contains
+shared controls like the tf-categorizer, tf-run-selector, and tf-x-type-selector.
+The #center div contains tf-charts embedded inside tf-collapsable-panes.
+-->
+<dom-module id="tf-actions-panel">
+  <template>
+    <style>
+    :host {
+      background: white;
+      width: 100%;
+      height: 64px;
+      box-sizing: border-box;
+      border-bottom: solid 1px var(--paper-grey-200, #eee);
+    }
+    .buttons {
+      padding: 20px 24px;
+      height: 24px;
+    }
+    .buttons tf-action-button,
+    .buttons input {
+      margin-right: 24px;
+    }
+    .buttons paper-fab ::content > iron-icon {
+      color: black;
+    }
+
+    .fabs {
+      position: absolute;
+      top: 43px;
+      right: 24px;
+    }
+
+    .fabs paper-fab {
+      --paper-fab-background: white;
+      --paper-fab-keyboard-focus-background: var(--paper-grey-200, #eee);
+      float: right;
+      margin-left: 10px;
+    }
+
+    .fabs paper-fab ::content > iron-icon {
+      color: black;
+    }
+    </style>
+
+    <div class="buttons">
+      <tf-action-button data-change="mode=offset" id="offset"><iron-icon icon="timeline"></iron-icon> Offset</tf-action-button>
+      <tf-action-button data-change="mode=overlay" id="overlay"><iron-icon icon="timeline"></iron-icon> Overlay</tf-action-button>
+      <tf-action-button data-change="time=wall" id="wall"><iron-icon icon="query-builder"></iron-icon> Wall</tf-action-button>
+      <tf-action-button data-change="time=i" id="index"><iron-icon icon="query-builder"></iron-icon> Index</tf-action-button>
+      <tf-action-button data-change="time=step" id="step"><iron-icon icon="query-builder"></iron-icon> Steps</tf-action-button>
+      <input type="search" default="filter"></input>
+    </div>
+
+    <div class="fabs">
+      <paper-fab mini noink icon="remove" title="Zoom In" id="out"></paper-fab>
+      <paper-fab mini noink icon="add" title="Zoom In" id="in"></paper-fab>
+    </div>
+
+  </template>
+  <script>
+    Polymer({
+      is: "tf-actions-panel",
+      properties: {},
+      listeners: {
+        "offset.tap": "onoffset",
+        "overlay.tap": "onoverlay",
+        "wall.tap": "tap",
+        "index.tap": "tap",
+        "step.tap": "tap",
+        "in.tap": "onzoomin",
+        "out.tap": "onzoomout"
+      },
+      ready: function() {
+
+      },
+      onoffset: function(e) { this.fire("change", { value: "mode=offset" }); },
+      onoverlay: function(e) { this.fire("change", { value: "mode=overlay" }); },
+      onzoomin: function(e) { this.fire("change", { value: "zoom=in" }); },
+      onzoomout: function(e) { this.fire("change", { value: "zoom=out" }); },
+      tap: function(e) { this.fire("change", { value: e.target.getAttribute("data-change") }); },
+    });
+  </script>
+</dom-module>
