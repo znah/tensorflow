@@ -51,7 +51,7 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
     .fabs paper-fab {
       --paper-fab-background: white;
       --paper-fab-keyboard-focus-background: var(--paper-grey-200, #eee);
-      float: right;
+      float: left;
       margin-left: 10px;
     }
 
@@ -61,17 +61,17 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
     </style>
 
     <div class="buttons">
-      <tf-action-button data-change="mode=offset" id="offset"><iron-icon icon="timeline"></iron-icon> Offset</tf-action-button>
+      <tf-action-button data-change="mode=offset" id="offset"><iron-icon icon="line-weight"></iron-icon> Offset</tf-action-button>
       <tf-action-button data-change="mode=overlay" id="overlay"><iron-icon icon="timeline"></iron-icon> Overlay</tf-action-button>
-      <tf-action-button data-change="time=wall" id="wall"><iron-icon icon="query-builder"></iron-icon> Wall</tf-action-button>
-      <tf-action-button data-change="time=i" id="index"><iron-icon icon="query-builder"></iron-icon> Index</tf-action-button>
-      <tf-action-button data-change="time=step" id="step"><iron-icon icon="query-builder"></iron-icon> Steps</tf-action-button>
+      <tf-action-button data-change="time=wall" id="wall"><iron-icon icon="schedule"></iron-icon> Wall</tf-action-button>
+      <tf-action-button data-change="time=i" id="index"><iron-icon icon="alarm"></iron-icon> Index</tf-action-button>
+      <tf-action-button data-change="time=step" id="step"><iron-icon icon="update"></iron-icon> Steps</tf-action-button>
       <input type="search" default="filter"></input>
     </div>
 
     <div class="fabs">
-      <paper-fab mini noink icon="remove" title="Zoom In" id="out"></paper-fab>
       <paper-fab mini noink icon="add" title="Zoom In" id="in"></paper-fab>
+      <paper-fab mini noink icon="remove" title="Zoom In" id="out"></paper-fab>
     </div>
 
   </template>
@@ -82,20 +82,22 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
       listeners: {
         "offset.tap": "onoffset",
         "overlay.tap": "onoverlay",
-        "wall.tap": "tap",
-        "index.tap": "tap",
-        "step.tap": "tap",
-        "in.tap": "onzoomin",
-        "out.tap": "onzoomout"
+        "wall.tap": "onwall",
+        "index.tap": "onindex",
+        "step.tap": "onstep",
+        "in.tap": "onin",
+        "out.tap": "onout"
       },
       ready: function() {
 
       },
-      onoffset: function(e) { this.fire("change", { value: "mode=offset" }); },
-      onoverlay: function(e) { this.fire("change", { value: "mode=overlay" }); },
-      onzoomin: function(e) { this.fire("change", { value: "zoom=in" }); },
-      onzoomout: function(e) { this.fire("change", { value: "zoom=out" }); },
-      tap: function(e) { this.fire("change", { value: e.target.getAttribute("data-change") }); },
+      onoffset: function(e) { this.fire("change", { method: "mode", value: "offset" }); },
+      onoverlay: function(e) { this.fire("change", { method: "mode", value: "overlay" }); },
+      onindex: function(e) { this.fire("change", { method: "time", value: "i" }); },
+      onwall: function(e) { this.fire("change", { method: "time", value: "wall" }); },
+      onstep: function(e) { this.fire("change", { method: "time", value: "step" }); },
+      onin: function(e) { this.fire("change", { method: "zoom", value: "in" }); },
+      onout: function(e) { this.fire("change", { method: "zoom", value: "out" }); }
     });
   </script>
 </dom-module>

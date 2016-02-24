@@ -8,8 +8,8 @@ function makeHistogramDashboard(el: any, elScope: any) {
   var actionsPanel = elScope.$.actions;
 
   actionsPanel.addEventListener("change", function(e) {
-    var property = e.detail.value.split("=")[0],
-        value = e.detail.value.split("=")[1];
+    var property = e.detail.method,
+        value = e.detail.value;
 
     if (property === "zoom") {
       if (value === "in") {
