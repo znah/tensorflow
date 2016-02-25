@@ -124,7 +124,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     is: "tf-vz-histogram-series",
     properties: {
       mode: { type: String, value: "offset" }, //offset|overlay
-      time: { type: String, value: "wall" }, //step|wall
+      time: { type: String, value: "i" }, //step|wall|i
       width: { type: Number, value: 500 },
       height: { type: Number, value: 500 },
       data: { type: Object, value: [] }
@@ -142,22 +142,26 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       var outerWidth = this.width,
           outerHeight = this.height;
 
-      var sliceHeight, margin;
+      var sliceHeight,
+          margin = { top: 5, right: 60, bottom: 20, left: 5};
 
+      if (outerWidth < 300) {
+        margin.right = 5;
+        margin.bottom = 5;
+      }
       if (mode === "offset") {
         sliceHeight = outerHeight / 2.5;
-        margin = {top: sliceHeight + 5, right: 60, bottom: 20, left: 5};
+        margin.top = sliceHeight + 5;
       } else {
-        sliceHeight = outerHeight - 25;
-        margin = {top: 5, right: 60, bottom: 20, left: 5};
+        sliceHeight = outerHeight - margin.top - margin.bottom;
       }
+
 
       var width = outerWidth - margin.left - margin.right,
           height = outerHeight - margin.top - margin.bottom;
 
       var leftMin = d3.min(data, function(d) { return d.leftMin; }),
           rightMax = d3.max(data, function(d) { return d.rightMax; });
-
       //
       // Formats
       //
@@ -202,15 +206,18 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           .range(["orange", "darkred"])
           .interpolate(d3.interpolateHcl);
 
-      var xAxis = d3.svg.axis().scale(xScale).orient("bottom"),
+      var xAxis = d3.svg.axis()
+              .scale(xScale)
+              .ticks(width > 100 ? 10 : 2)
+              .orient("bottom"),
           yAxis = d3.svg.axis()
               .scale(yScale)
               // .tickFormat(formatTime)
-              .ticks(5)
+              .ticks(width > 100 ? 10 : 2)
               .orient("right"),
           ySliceAxis = d3.svg.axis()
               .scale(ySliceScale)
-              .ticks(5)
+              .ticks(width > 100 ? 10 : 2)
               .tickSize(width + 5)
               .orient("right");
 

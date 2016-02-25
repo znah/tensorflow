@@ -1,66 +1,112 @@
 var rm = new TF.Backend.RequestManager();
 var backend = new TF.Backend.Backend("/components/tf-tensorboard/demo/giant_data", rm, true);
 
-function makeHistogramDashboard(el: any, elScope: any) {
-  var chartWidth = 300,
-      chartHeight = 250;
-
-  var actionsPanel = elScope.$.actions;
-
-  actionsPanel.addEventListener("change", function(e) {
-    var property = e.detail.method,
-        value = e.detail.value;
-
-    if (property === "zoom") {
-      if (value === "in") {
-        chartWidth = chartWidth  * 1.5;
-        chartHeight = chartHeight * 1.5;
-      } else if (value === "out") {
-        chartWidth = chartWidth  / 1.5;
-        chartHeight = chartHeight / 1.5;
-      }
-    }
-    var radarResponse = radar.scan();
-    radarResponse.visible.concat(radarResponse.almost.concat(radarResponse.hidden)).forEach(function(n:any) {
-      var chart = histogramChartsByRunTag[n.run + n.tag];
-      chart[property] = value;
-      chart.width = chartWidth;
-      chart.height = chartHeight;
-      chart.dirty = true;
-    });
-    radarResponse.visible.forEach(function(n:any) {
-      var chart = histogramChartsByRunTag[n.run + n.tag];
-      chart.draw(1000);
-      chart.dirty = false;
-    });
-  })
+function makeHistogramDashboard(el: HTMLElement, elScope: any) {
 
   var chartsContainer: d3.Selection<HCategory> = d3.select(el);
-  var frame = el.parentElement.parentElement;
-  var radar = new TF.NodeRadar(frame);
-  var histogramChartsByRunTag = {}; //dictionary to find chart nodes from noderadar values.
 
-  // Scanning
-  setInterval(function() {
+  var data = [];
+
+  //
+  // Chart sizing
+  //
+  var numColumns = 2 * 2 * 2; //must be power of two
+  var chartAspectRatio = 0.75;
+  var stageWidth;
+  var chartWidth;
+  var chartHeight;
+  function updateChartSize() {
+    stageWidth = el.getBoundingClientRect().width - 48;
+    chartWidth = Math.floor(stageWidth / numColumns);
+    chartHeight = Math.floor(chartWidth * chartAspectRatio);
+  }
+
+  //
+  // Radar
+  //
+  var frame = elScope.$.frame;
+  var radar = new TF.NodeRadar(frame);
+  var radarResponse;
+  var visibleCharts;
+  var almostVisibleCharts;
+  var allCharts;
+  var chartsByRunTag = {}; //dictionary to find chart nodes from noderadar values.
+
+  // Scan every so many milliseconds to keep us honest. Could be better.
+  setInterval(scan, 1000);
+  function scan() {
     console.log("Scanning");
-    var response = radar.scan();
-    response.almost.concat(response.visible).forEach(function(n:any) {
-      var c = histogramChartsByRunTag[n.run + n.tag];
-      if (c.dirty) {
-        c.draw();
-        c.dirty = false;
-      }
-      if (!c.dataRequested) {
-        console.log("requesting")
-        backend.histograms(n.run, n.tag).then(function(data) {
-          c.data = processData(data);
-          c.dirty = true;
-          c.dataLoaded;
+    radarResponse = radar.scan();
+    var getChart = function(n:any) { return { chart: chartsByRunTag[n.run + n.tag], run: n.run, tag: n.tag }; };
+    var hiddenCharts = radarResponse.hidden.map(getChart);
+    visibleCharts = radarResponse.visible.map(getChart);
+    almostVisibleCharts = visibleCharts.concat(radarResponse.almost.map(getChart));
+    allCharts = almostVisibleCharts.concat(hiddenCharts);
+    updateChartSize();
+    almostVisibleCharts.forEach(function(d) {
+      if (!d.chart.dataRequested) {
+        console.log("Requesting");
+        backend.histograms(d.run, d.tag).then(function(data) {
+          mutateChart(d.chart, "data", processData(data));
         });
+        d.chart.dataRequested = true;
       }
-      c.dataRequested = true;
-    })
-  }, 500);
+      if (d.chart.dirty) {
+        drawChart(d.chart)
+      }
+    });
+  }
+
+  //
+  // Events from actions panel
+  //
+  var actionsPanel = elScope.$.actions;
+
+  actionsPanel.addEventListener("zoomchange", function(e) {
+    numColumns = (e.detail.value === "in" ? numColumns / 2 : numColumns * 2);
+    updateChartSize();
+    render();
+    // allCharts.forEach(function(d:any) {
+    //   mutateChart(d.chart, "width", chartWidth);
+    //   mutateChart(d.chart, "height", chartHeight);
+    // });
+    // updateVisibleCharts(1000);
+  });
+
+  actionsPanel.addEventListener("modechange", function(e) {
+    allCharts.forEach(function(d:any) {
+      mutateChart(d.chart, "mode", e.detail.value);
+    });
+    updateVisibleCharts(1000);
+  });
+
+  actionsPanel.addEventListener("timechange", function(e) {
+    allCharts.forEach(function(d:any) {
+      mutateChart(d.chart, "time", e.detail.value);
+    });
+    updateVisibleCharts(1000);
+  });
+
+  function mutateChart(c, property, value) {
+    c[property] = value;
+    c.dirty = true;
+  }
+
+  function drawChart(c, animationDuration?: number) {
+    c.draw(animationDuration)
+    c.dirty = false
+  }
+
+  function updateVisibleCharts(animationDuration) {
+    visibleCharts.forEach(function(d:any) {
+      drawChart(d.chart, animationDuration)
+    });
+  }
+
+
+  //
+  // Render skeleton HTML
+  //
 
   interface RunTag {
     run: string;
@@ -95,22 +141,59 @@ function makeHistogramDashboard(el: any, elScope: any) {
   };
 
   backend.runs().then((x) => {
-    var hcats = histogramCategories(x);
 
-    var runsByTagByCategory = hcats.map(function(d: any) {
+
+
+    data = histogramCategories(x);
+    data.forEach(function(d: any) {
       d.runsByTag = d3.nest()
           .key(function(d: any) { return d.tag; })
           .entries(d.runTags);
-      console.log(d.runsByTag)
-      return d;
-    })
+    });
+    updateChartSize();
+    render();
 
-    console.log(hcats);
-    var category = chartsContainer.selectAll(".category").data(hcats, (d: any) => d.name),
+    // This adds the css scoping necessary for the new elements
+    elScope.scopeSubtree(elScope.$.content, false);
+  });
+
+  function layout() {
+    var categoryMargin = {top: 60, bottom: 20};
+    var tagMargin = {top: 35, bottom: 30};
+    var chartMargin = {top: 15, right: 10};
+    stageWidth = el.getBoundingClientRect().width - 48;
+    chartWidth = Math.floor(stageWidth / numColumns) - chartMargin.right;
+    chartHeight = Math.min(frame.getBoundingClientRect().height - 40, Math.floor(chartWidth * chartAspectRatio) - chartMargin.top);
+
+    console.log(numColumns, chartWidth, chartHeight)
+    var cumulativeCategoryHeight = 0;
+    data.forEach(function(category, ci) {
+      var cumulativeTagHeight = 0;
+      category.runsByTag.forEach(function(tag, ti) {
+        tag.values.forEach(function(run, ri) {
+          run.x = (ri % numColumns) * (chartWidth + chartMargin.right);
+          run.y = Math.floor(ri / numColumns) * (chartHeight + chartMargin.top) + tagMargin.top;
+        });
+        tag.height = chartHeight * Math.ceil(tag.values.length / numColumns) + tagMargin.bottom + tagMargin.top;
+        tag.y = cumulativeTagHeight + categoryMargin.top;
+        cumulativeTagHeight += tag.height;
+      });
+      category.height = cumulativeTagHeight + categoryMargin.bottom + categoryMargin.top;
+      category.y = cumulativeCategoryHeight;
+      cumulativeCategoryHeight += category.height;
+    });
+  }
+
+
+  function render() {
+    console.time("render");
+    layout();
+    var category = chartsContainer.selectAll(".category").data(data, (d: any) => d.name),
         categoryExit = category.exit().remove(),
         categoryEnter = category.enter().append("div").attr("class", "category"),
         categoryUpdate = category
-            .style("position", "relative");
+            .style("top", (d) => d.y + "px")
+            .style("height", (d) => d.height + "px");
 
     categoryEnter.append("h3")
         .text((d) => d.name);
@@ -118,41 +201,43 @@ function makeHistogramDashboard(el: any, elScope: any) {
     var tag = categoryUpdate.selectAll(".tag").data((d: any) => d.runsByTag, (d: any) => d.key),
         tagExit = tag.exit().remove(),
         tagEnter = tag.enter().append("div").attr("class", "tag"),
-        tagUpdate = tag;
+        tagUpdate = tag
+            .style("top", (d) => d.y + "px")
+            .style("height", (d) => d.height + "px");
 
-    tagUpdate.append("h4")
+    tagEnter.append("h4")
         .text((d) => d.key)
 
     var run = tagUpdate.selectAll(".run").data((d: any) => d.values, (d: any) => d.run),
         runExit = run.exit().remove(),
         runEnter = run.enter().append("div").attr("class", "run"),
         runUpdate = run
+            .style("left", (d) => d.x + "px")
+            .style("top", (d) => d.y + "px")
             .style("width", chartWidth + "px")
             .style("height", chartHeight + "px");
 
-    run.append("h5")
+    runEnter.append("h5")
         .text((d: any) => d.run);
 
-    console.time("histogram enter");
     var histogramEnter = runEnter.append("tf-vz-histogram-series"),
-        histogramUpdate = runUpdate.select("tf-vz-histogram-series");
+        histogramUpdate = runUpdate.select("tf-vz-histogram-series")
+            .property("dirty", true)
+            .style("top", "15px")
+            .attr("width", chartWidth)
+            .attr("height", chartHeight - 15);
 
-    histogramUpdate.each(function(d:any) {
-      histogramChartsByRunTag[d.run + d.tag] = this;
-      var c = this;
-      c.width = chartWidth;
-      c.height = chartHeight;
+    histogramEnter.each(function(d:any) {
+      chartsByRunTag[d.run + d.tag] = this;
       radar.add(this, d);
     });
-    console.timeEnd("histogram enter");
+    console.timeEnd("render");
+    scan();
+  }
 
-
-
-    //TODO This adds the css scoping necessary for the new elements
-    elScope.scopeSubtree(elScope.$.content, false);
-  });
-
-
+  //
+  //TODO Processing Data. This needs some work.
+  //
   function processData(data: any) {
     data.forEach(function(dd: any, i: Number) {
       var prev = null;

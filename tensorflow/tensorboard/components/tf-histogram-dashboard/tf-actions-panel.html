@@ -28,24 +28,39 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
       width: 100%;
       height: 64px;
       box-sizing: border-box;
-      border-bottom: solid 1px var(--paper-grey-200, #eee);
+      border-bottom: solid 1px rgba(0,0,0,0.1);
+      box-shadow: 2px 1px 7px rgba(0,0,0,0.08);
     }
     .buttons {
-      padding: 20px 24px;
-      height: 24px;
+      position: absolute;
+      top: 12px;
+      left: 20px;
     }
-    .buttons tf-action-button,
-    .buttons input {
-      margin-right: 24px;
+    .buttons .divider {
+      float: left;
+      border-left: solid 1px var(--paper-grey-300);
+      margin: 0 18px 0 12px;
+      height: 36px;
+    }
+    .buttons tf-action-button {
+      margin-right: 12px;
+      float: left;
     }
     .buttons paper-fab ::content > iron-icon {
       color: black;
+    }
+
+    input {
+      height: 24px;
+      font-size: 24px;
+      position: relative;
     }
 
     .fabs {
       position: absolute;
       top: 43px;
       right: 24px;
+      z-index: 100;
     }
 
     .fabs paper-fab {
@@ -53,6 +68,7 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
       --paper-fab-keyboard-focus-background: var(--paper-grey-200, #eee);
       float: left;
       margin-left: 10px;
+      @apply(--shadow-elevation-0dp);
     }
 
     .fabs paper-fab ::content > iron-icon {
@@ -61,17 +77,24 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
     </style>
 
     <div class="buttons">
-      <tf-action-button data-change="mode=offset" id="offset"><iron-icon icon="line-weight"></iron-icon> Offset</tf-action-button>
-      <tf-action-button data-change="mode=overlay" id="overlay"><iron-icon icon="timeline"></iron-icon> Overlay</tf-action-button>
-      <tf-action-button data-change="time=wall" id="wall"><iron-icon icon="schedule"></iron-icon> Wall</tf-action-button>
-      <tf-action-button data-change="time=i" id="index"><iron-icon icon="alarm"></iron-icon> Index</tf-action-button>
-      <tf-action-button data-change="time=step" id="step"><iron-icon icon="update"></iron-icon> Steps</tf-action-button>
-      <input type="search" default="filter"></input>
+      <tf-action-button id="offset"><iron-icon icon="line-weight"></iron-icon> Offset</tf-action-button>
+      <tf-action-button id="overlay"><iron-icon icon="timeline"></iron-icon> Overlay</tf-action-button>
+      <div class="divider"></div>
+      <tf-action-button id="wall"><iron-icon icon="schedule"></iron-icon> Wall</tf-action-button>
+      <tf-action-button id="index"><iron-icon icon="schedule"></iron-icon> Index</tf-action-button>
+      <tf-action-button id="step"><iron-icon icon="schedule"></iron-icon> Steps</tf-action-button>
+      <div class="divider"></div>
+      <tf-action-button id="search">
+        <iron-icon icon="search"></iron-icon>
+        <input type="search" default="filter"></input>
+      </tf-action-button>
+
     </div>
 
     <div class="fabs">
-      <paper-fab mini noink icon="add" title="Zoom In" id="in"></paper-fab>
-      <paper-fab mini noink icon="remove" title="Zoom In" id="out"></paper-fab>
+      <paper-fab mini noink raised icon="add" title="Zoom In" id="in"></paper-fab>
+      <paper-fab mini noink icon="remove" title="Zoom Out" id="out"></paper-fab>
+      <paper-fab mini noink icon="toc" title="Table of Contents" id="toc"></paper-fab>
     </div>
 
   </template>
@@ -91,13 +114,13 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
       ready: function() {
 
       },
-      onoffset: function(e) { this.fire("change", { method: "mode", value: "offset" }); },
-      onoverlay: function(e) { this.fire("change", { method: "mode", value: "overlay" }); },
-      onindex: function(e) { this.fire("change", { method: "time", value: "i" }); },
-      onwall: function(e) { this.fire("change", { method: "time", value: "wall" }); },
-      onstep: function(e) { this.fire("change", { method: "time", value: "step" }); },
-      onin: function(e) { this.fire("change", { method: "zoom", value: "in" }); },
-      onout: function(e) { this.fire("change", { method: "zoom", value: "out" }); }
+      onoffset: function(e) { this.fire("modechange", { value: "offset" }); },
+      onoverlay: function(e) { this.fire("modechange", { value: "overlay" }); },
+      onindex: function(e) { this.fire("timechange", { value: "i" }); },
+      onwall: function(e) { this.fire("timechange", { value: "wall" }); },
+      onstep: function(e) { this.fire("timechange", { value: "step" }); },
+      onin: function(e) { this.fire("zoomchange", { value: "in" }); },
+      onout: function(e) { this.fire("zoomchange", { value: "out" }); }
     });
   </script>
 </dom-module>
