@@ -164,12 +164,13 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
       category.y = cumulativeCategoryHeight;
       var cumulativeTagHeight = 0;
       category.runsByTag.forEach(function(tag, ti) {
-        tag.height = chartHeight * Math.ceil(tag.values.length / numColumns) + tagMargin.bottom + tagMargin.top;
+        tag.height = (chartHeight + chartMargin.top) * Math.ceil(tag.values.length / numColumns) + tagMargin.bottom + tagMargin.top;
         tag.y = cumulativeTagHeight + categoryMargin.top;
         tag.pageY = category.y + tag.y;
         tag.values.forEach(function(run, ri) {
           run.x = (ri % numColumns) * (chartWidth + chartMargin.right);
           run.y = Math.floor(ri / numColumns) * (chartHeight + chartMargin.top) + tagMargin.top;
+          run.pageY = run.y + tag.pageY;
         });
         cumulativeTagHeight += tag.height;
       });
@@ -258,7 +259,9 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
       }
     });
 
-    visibleCharts = histogramUpdate;
+    visibleCharts = histogramUpdate.filter(function(d) {
+      return d.pageY < scrollContainerBottom && (d.pageY + chartHeight) >= scrollContainerTop;
+    });
 
     console.timeEnd("render");
   }
