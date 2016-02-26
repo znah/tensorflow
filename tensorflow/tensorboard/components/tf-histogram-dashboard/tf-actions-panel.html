@@ -86,7 +86,7 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
       <div class="divider"></div>
       <tf-action-button id="search">
         <iron-icon icon="search"></iron-icon>
-        <input type="search" default="filter"></input>
+        <input type="search" id="searchInput"></input>
       </tf-action-button>
 
     </div>
@@ -109,18 +109,20 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
         "index.tap": "onindex",
         "step.tap": "onstep",
         "in.tap": "onin",
-        "out.tap": "onout"
+        "out.tap": "onout",
+        "searchInput.input": "onsearch"
       },
-      ready: function() {
-
-      },
-      onoffset: function(e) { this.fire("modechange", { value: "offset" }); },
-      onoverlay: function(e) { this.fire("modechange", { value: "overlay" }); },
-      onindex: function(e) { this.fire("timechange", { value: "i" }); },
-      onwall: function(e) { this.fire("timechange", { value: "wall" }); },
-      onstep: function(e) { this.fire("timechange", { value: "step" }); },
-      onin: function(e) { this.fire("zoomchange", { value: "in" }); },
-      onout: function(e) { this.fire("zoomchange", { value: "out" }); }
+      ready: function() {},
+      onoffset: function(e) { this.fire("modechange", {value: "offset"}); },
+      onoverlay: function(e) { this.fire("modechange", {value: "overlay"}); },
+      onindex: function(e) { this.fire("timechange", {value: "i"}); },
+      onwall: function(e) { this.fire("timechange", {value: "wall"}); },
+      onstep: function(e) { this.fire("timechange", {value: "step"}); },
+      onin: function(e) { this.fire("zoomchange", {value: "in"}); },
+      onout: function(e) { this.fire("zoomchange", {value: "out"}); },
+      onsearch: function(e) {
+        this.fire("searchchange", {value: this.$.searchInput.value});
+      }
     });
   </script>
 </dom-module>

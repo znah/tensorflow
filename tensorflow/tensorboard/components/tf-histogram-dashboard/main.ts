@@ -78,6 +78,10 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     updateVisibleCharts(1000);
   });
 
+  actionsPanel.addEventListener("searchchange", function(e) {
+    filter(e.detail.value);
+  });
+
   function mutateChart(c, property, value) {
     c[property] = value;
     c.dirty = true;
@@ -140,11 +144,31 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
           .entries(d.runTags);
     });
     // updateChartSize();
+    filter("");
     render();
 
     // This adds the css scoping necessary for the new elements
     elScope.scopeSubtree(elScope.$.content, true);
   });
+
+  function filter(query) {
+    var queryExpression = new RegExp(query, "i");
+    data.forEach(function(category) {
+      var matchCount = 0;
+      category.runsByTag.forEach(function(tag) {
+        var match = tag.key.match(queryExpression);
+        console.log(tag.key)
+        if (match && match.length > 0) {
+          matchCount++;
+          tag.match = true;
+        } else {
+          tag.match = false;
+        }
+      });
+      category.match = (matchCount > 0);
+    });
+    render();
+  }
 
   function layout() {
     console.time("layout");
@@ -160,10 +184,10 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     );
 
     var cumulativeCategoryHeight = 0;
-    data.forEach(function(category, ci) {
+    data.forEach(function(category) {
       category.y = cumulativeCategoryHeight;
       var cumulativeTagHeight = 0;
-      category.runsByTag.forEach(function(tag, ti) {
+      category.runsByTag.forEach(function(tag) {
         tag.height = (chartHeight + chartMargin.top) * Math.ceil(tag.values.length / numColumns) + tagMargin.bottom + tagMargin.top;
         tag.y = cumulativeTagHeight + categoryMargin.top;
         tag.pageY = category.y + tag.y;
@@ -172,10 +196,10 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
           run.y = Math.floor(ri / numColumns) * (chartHeight + chartMargin.top) + tagMargin.top;
           run.pageY = run.y + tag.pageY;
         });
-        cumulativeTagHeight += tag.height;
+        cumulativeTagHeight += tag.match ? tag.height : 0;
       });
       category.height = cumulativeTagHeight + categoryMargin.bottom + categoryMargin.top;
-      cumulativeCategoryHeight += category.height;
+      cumulativeCategoryHeight += category.match ? category.height : 0;
     });
     console.timeEnd("layout");
   }
@@ -195,12 +219,13 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
         categoryExit = category.exit().remove(),
         categoryEnter = category.enter().append("div").attr("class", "category"),
         categoryUpdate = category
+            .style("display", (d) => d.match ? "" : "none")
             .style("top", (d) => d.y + "px")
             .style("height", (d) => d.height + "px");
 
     // Filter to just visible categories.
     categoryUpdate = categoryUpdate.filter(function(d) {
-      return d.y < bufferBottom && (d.y + d.height) >= bufferTop;
+      return d.y < bufferBottom && (d.y + d.height) >= bufferTop && d.match;
     });
 
     categoryEnter.append("h3")
@@ -210,12 +235,13 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
         tagExit = tag.exit().remove(),
         tagEnter = tag.enter().append("div").attr("class", "tag"),
         tagUpdate = tag
+            .style("display", (d) => d.match ? "" : "none")
             .style("top", (d) => d.y + "px")
             .style("height", (d) => d.height + "px");
 
     // Filter to just visible tags.
     tagUpdate = tagUpdate.filter(function(d) {
-      return d.pageY < bufferBottom && (d.pageY + d.height) >= bufferTop;
+      return d.pageY < bufferBottom && (d.pageY + d.height) >= bufferTop && d.match;
     });
 
     tagEnter.append("h4")
