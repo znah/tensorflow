@@ -10,7 +10,7 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
   //
   // Chart sizing
   //
-  var numColumns = 2 * 2 * 2; //must be power of two
+  var numColumns = 2 * 2; //must be power of two
   var chartAspectRatio = 0.75;
   var stageWidth;
   var chartWidth;
@@ -20,38 +20,16 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
   // Radar
   //
   var frame = elScope.$.frame;
-  var radar = new TF.NodeRadar(frame);
   var scrollContainer = document.querySelector("#mainContainer");
-  var radarResponse;
   var visibleCharts;
   var almostVisibleCharts;
   var allCharts = [];
-  var chartsByRunTag = {}; //dictionary to find chart nodes from noderadar values.
 
   // Scan every so many milliseconds to keep us honest. Could be better.
   setInterval(scan, 500);
   function scan() {
     render();
     console.log("Scanning");
-    // radarResponse = radar.scan();
-    // var getChart = function(n:any) { return { chart: chartsByRunTag[n.run + n.tag], run: n.run, tag: n.tag }; };
-    // var hiddenCharts = radarResponse.hidden.map(getChart);
-    // visibleCharts = radarResponse.visible.map(getChart);
-    // almostVisibleCharts = visibleCharts.concat(radarResponse.almost.map(getChart));
-    // allCharts = almostVisibleCharts.concat(hiddenCharts);
-    // updateChartSize();
-    // almostVisibleCharts.forEach(function(d) {
-    //   if (!d.chart.dataRequested) {
-    //     console.log("Requesting");
-    //     backend.histograms(d.run, d.tag).then(function(data) {
-    //       mutateChart(d.chart, "data", processData(data));
-    //     });
-    //     d.chart.dataRequested = true;
-    //   }
-    //   if (d.chart.dirty) {
-    //     drawChart(d.chart)
-    //   }
-    // });
   }
 
   //
@@ -143,7 +121,6 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
           .key(function(d: any) { return d.tag; })
           .entries(d.runTags);
     });
-    // updateChartSize();
     filter("");
     render();
 
@@ -179,7 +156,7 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     stageWidth = el.getBoundingClientRect().width - 48;
     chartWidth = Math.floor(stageWidth / numColumns) - chartMargin.right;
     chartHeight = Math.min(
-      frame.getBoundingClientRect().height - 40,
+      frame.getBoundingClientRect().height * 0.8,
       Math.floor(chartWidth * chartAspectRatio) - chartMargin.top
     );
 
@@ -206,8 +183,8 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
 
 
   function render() {
-    console.time("render");
     layout();
+    console.time("render");
 
     var scrollContainerHeight = scrollContainer.getBoundingClientRect().height;
     var scrollContainerTop = scrollContainer.scrollTop;
@@ -235,8 +212,9 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
         tagExit = tag.exit().remove(),
         tagEnter = tag.enter().append("div").attr("class", "tag"),
         tagUpdate = tag
+            // .style("top", (d) => d.y + "px")
+            .style("transform", (d) => "translate3d(0px, " + d.y + "px, 0px)" )
             .style("display", (d) => d.match ? "" : "none")
-            .style("top", (d) => d.y + "px")
             .style("height", (d) => d.height + "px");
 
     // Filter to just visible tags.
@@ -251,8 +229,9 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
         runExit = run.exit().remove(),
         runEnter = run.enter().append("div").attr("class", "run"),
         runUpdate = run
-            .style("left", (d) => d.x + "px")
-            .style("top", (d) => d.y + "px")
+            .style("transform", (d) => "translate3d(" + d.x + "px ," + d.y + "px, 0px)" )
+            // .style("top", (d) => d.y + "px")
+            // .style("left", (d) => d.x + "px")
             .style("width", chartWidth + "px")
             .style("height", chartHeight + "px");
 
