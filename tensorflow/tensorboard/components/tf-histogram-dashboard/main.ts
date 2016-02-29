@@ -3,34 +3,54 @@ var backend = new TF.Backend.Backend("/components/tf-tensorboard/demo/giant_data
 
 function makeHistogramDashboard(el: HTMLElement, elScope: any) {
 
-  var chartsContainer: d3.Selection<HCategory> = d3.select(el);
 
   var data = [];
 
   //
   // Chart sizing
   //
+  var chartsContainer: d3.Selection<HCategory> = d3.select(el);
+  var frame = elScope.$.frame;
+  var frameWidth;
+  var frameHeight;
+  var scrollContainer = document.querySelector("#mainContainer");
   var numColumns = 2 * 2; //must be power of two
   var chartAspectRatio = 0.75;
-  var stageWidth;
   var chartWidth;
   var chartHeight;
 
   //
   //
   //
-  var frame = elScope.$.frame;
-  var scrollContainer = document.querySelector("#mainContainer");
   var visibleCharts;
   var almostVisibleCharts;
   var allCharts = [];
 
   // Scan every so many milliseconds to keep us honest. Could be better.
-  setInterval(scan, 500);
-  function scan() {
+  // Should debounce and bind to scroll and resize.
+  // setInterval(scan, 500);
+  // function scan() {
+  //   render();
+  //   console.log("Scanning");
+  // }
+
+  //
+  // Scroll and Resize events
+  //
+  var lastRenderedScrollPosition = 0;
+  throttle("scroll", "throttledScroll", scrollContainer);
+  scrollContainer.addEventListener("throttledScroll", function() {
+    if (Math.abs(lastRenderedScrollPosition - scrollContainer.scrollTop) > frameHeight * 0.5) {
+      console.log("scrolling");
+      render();
+    }
+  });
+
+  throttle("resize", "throttledResize", window);
+  window.addEventListener("throttledResize", function() {
+    console.log("resizing");
     render();
-    console.log("Scanning");
-  }
+  });
 
   //
   // Events from actions panel
@@ -38,13 +58,10 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
   var actionsPanel = elScope.$.actions;
 
   actionsPanel.addEventListener("zoomchange", function(e) {
-
-    console.log("scrollY")
     var targetY = 0;
     var previousStageHeight = data[data.length - 1].y + data[data.length - 1].height;
     var previousScrollTop = scrollContainer.scrollTop + targetY;
-    // scrollContainer.scrollTop = 200;
-    numColumns = (e.detail.value === "in" ? Math.ceil(numColumns - 1) : Math.ceil(numColumns + 1));
+    numColumns = Math.max(1, (e.detail.value === "in" ? Math.ceil(numColumns - 1) : Math.ceil(numColumns + 1)));
     layout();
     var newStageHeight = data[data.length - 1].y + data[data.length - 1].height;
     scrollContainer.scrollTop = previousScrollTop * (newStageHeight / previousStageHeight ) - targetY;
@@ -143,7 +160,6 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
       var matchCount = 0;
       category.runsByTag.forEach(function(tag) {
         var match = tag.key.match(queryExpression);
-        console.log(tag.key)
         if (match && match.length > 0) {
           matchCount++;
           tag.match = true;
@@ -156,14 +172,16 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     render();
   }
 
+
   function layout() {
     console.time("layout");
     var categoryMargin = {top: 60, bottom: 20};
     var tagMargin = {top: 35, bottom: 30};
     var chartMargin = {top: 15, right: 10};
 
-    stageWidth = el.getBoundingClientRect().width - 48;
-    chartWidth = Math.floor(stageWidth / numColumns) - chartMargin.right;
+    frameWidth = el.getBoundingClientRect().width - 48;
+    frameHeight = frame.getBoundingClientRect().height;
+    chartWidth = Math.floor(frameWidth / numColumns) - chartMargin.right;
     chartHeight = Math.min(
       frame.getBoundingClientRect().height * 0.8,
       Math.floor(chartWidth * chartAspectRatio) - chartMargin.top
@@ -195,6 +213,7 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     layout();
     console.time("render");
 
+    lastRenderedScrollPosition = scrollContainer.scrollTop;
     var scrollContainerHeight = scrollContainer.getBoundingClientRect().height;
     var scrollContainerTop = scrollContainer.scrollTop;
     var scrollContainerBottom = scrollContainer.scrollTop + scrollContainerHeight;
@@ -221,9 +240,8 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
         tagExit = tag.exit().remove(),
         tagEnter = tag.enter().append("div").attr("class", "tag"),
         tagUpdate = tag
-            // .style("top", (d) => d.y + "px")
-            .style("transform", (d) => "translate3d(0px, " + d.y + "px, 0px)" )
             .style("display", (d) => d.match ? "" : "none")
+            .style("transform", (d) => "translate(0px, " + d.y + "px)" )
             .style("height", (d) => d.height + "px");
 
     // Filter to just visible tags.
@@ -238,9 +256,7 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
         runExit = run.exit().remove(),
         runEnter = run.enter().append("div").attr("class", "run"),
         runUpdate = run
-            .style("transform", (d) => "translate3d(" + d.x + "px ," + d.y + "px, 0px)" )
-            // .style("top", (d) => d.y + "px")
-            // .style("left", (d) => d.x + "px")
+            .style("transform", (d) => "translate(" + d.x + "px ," + d.y + "px)" )
             .style("width", chartWidth + "px")
             .style("height", chartHeight + "px");
 
@@ -260,6 +276,8 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
       if (!chart.dataRequested) {
         backend.histograms(d.run, d.tag).then(function(data) {
           mutateChart(chart, "data", processData(data));
+          drawChart(chart);
+          // render();
         });
         chart.dataRequested = true;
       }
@@ -279,17 +297,6 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
 
     console.timeEnd("render");
   }
-
-  // if (!d.chart.dataRequested) {
-  //     console.log("Requesting");
-  //     backend.histograms(d.run, d.tag).then(function(data) {
-  //       mutateChart(d.chart, "data", processData(data));
-  //     });
-  //     d.chart.dataRequested = true;
-  //   }
-  //   if (d.chart.dirty) {
-  //     drawChart(d.chart)
-  //   }
 
   //
   //TODO Processing Data. This needs some work.
@@ -339,4 +346,20 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     });
     return data.filter(function(d) { return d.step; }); //TODO Bad, some step values are undefined
   }
+
+  //
+  // Throttled events
+  function throttle(eventName, throttledEventName, obj) {
+    var running = false;
+    var f = function() {
+      if (running) { return; }
+      running = true;
+      requestAnimationFrame(function() {
+        obj.dispatchEvent(new CustomEvent(throttledEventName));
+        running = false;
+      });
+    };
+    obj.addEventListener(eventName, f);
+  }
+  //
 }
