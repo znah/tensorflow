@@ -82,7 +82,8 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     updateVisibleCharts(1000);
   });
 
-  actionsPanel.addEventListener("searchchange", function(e) {
+  throttle("searchchange", "throttledSearchchange", actionsPanel);
+  actionsPanel.addEventListener("throttledSearchchange", function(e) {
     filter(e.detail.value);
   });
 
@@ -351,11 +352,11 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
   // Throttled events
   function throttle(eventName, throttledEventName, obj) {
     var running = false;
-    var f = function() {
+    var f = function(e) {
       if (running) { return; }
       running = true;
       requestAnimationFrame(function() {
-        obj.dispatchEvent(new CustomEvent(throttledEventName));
+        obj.dispatchEvent(new CustomEvent(throttledEventName, e));
         running = false;
       });
     };
