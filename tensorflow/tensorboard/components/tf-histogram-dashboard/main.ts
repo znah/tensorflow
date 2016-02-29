@@ -17,7 +17,7 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
   var chartHeight;
 
   //
-  // Radar
+  //
   //
   var frame = elScope.$.frame;
   var scrollContainer = document.querySelector("#mainContainer");
@@ -38,7 +38,16 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
   var actionsPanel = elScope.$.actions;
 
   actionsPanel.addEventListener("zoomchange", function(e) {
-    numColumns = (e.detail.value === "in" ? numColumns / 2 : numColumns * 2);
+
+    console.log("scrollY")
+    var targetY = 0;
+    var previousStageHeight = data[data.length - 1].y + data[data.length - 1].height;
+    var previousScrollTop = scrollContainer.scrollTop + targetY;
+    // scrollContainer.scrollTop = 200;
+    numColumns = (e.detail.value === "in" ? Math.ceil(numColumns - 1) : Math.ceil(numColumns + 1));
+    layout();
+    var newStageHeight = data[data.length - 1].y + data[data.length - 1].height;
+    scrollContainer.scrollTop = previousScrollTop * (newStageHeight / previousStageHeight ) - targetY;
     render();
   });
 
