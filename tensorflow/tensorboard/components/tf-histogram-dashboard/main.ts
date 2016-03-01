@@ -1,7 +1,72 @@
 var rm = new TF.Backend.RequestManager();
 var backend = new TF.Backend.Backend("/components/tf-tensorboard/demo/giant_data", rm, true);
 
+enum JoyEnum {
+  offset,
+  overlay,
+}
+
+enum XEnum {
+  step,
+  wall_time,
+  relative,
+  index
+}
+
+interface RunTag {
+  run: string;
+  tag: string;
+}
+
+interface Category<T> {
+  name: string;
+  items: T[];
+}
+
+function histogramCategories(x: TF.Backend.RunsResponse): Category<RunTag>[] {
+  var enumerations = <TF.Backend.RunEnumeration[]> _.values(x);
+  var tags: string[][] = enumerations.map((e) => e.histograms);
+  var all_tags: string[] = _.union.apply(null, tags);
+  var categorizer = Categorizer.topLevelNamespaceCategorizer;
+  var categories = categorizer(all_tags);
+
+  var runNames = _.keys(x);
+  function tag2runtag(t: string): RunTag[] {
+    return runNames.filter((r) => {
+      return x[r].histograms.indexOf(t) !== -1;
+    }).map((r) => {return {tag: t, run: r}});
+  }
+
+  return categories.map((c) => {
+    return {
+      name: c.name,
+      items: _.flatten(c.tags.map(tag2runtag))
+    };
+  });
+};
+
 function makeHistogramDashboard(el: HTMLElement, elScope: any) {
+  function histogramGenerator(joyStore: Nanite.Store<JoyEnum>, xStore: Nanite.Store<XEnum>) {
+    return function(rt: RunTag) {
+      return {
+        run: rt.run,
+        tag: rt.tag,
+        render: function() {
+          throw new Error("not implemented");
+      }};
+    }
+  }
+
+  var joyStore = new Nanite.Store<JoyEnum>();
+  var xStore = new Nanite.Store<XEnum>();
+
+
+  var runsResponseStore = new Nanite.Store<TF.Backend.RunResponse>({});
+  backend.runs().then((x) => runsResponseStore.set(x));
+
+  var categoryStore: Nanite.Store<Category<RunTag>[]> = runResponseStore.map(histogramCategories);
+  var chartCategoryStore: Nanite.Store<Category<HistogramChart>>;
+  chartCategoryStore = categoryStore.map((c: Category<RunTag>) => c.items.map(histogramGenerator(joyStore, xStore)))
 
 
   var data = [];
@@ -72,6 +137,8 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     allCharts.forEach(function(chart) {
       mutateChart(chart, "mode", e.detail.value);
     });
+    var v = e.detail.value === "overlay" ? JoyEnum.overlay : JoyEnum.offset;
+    joyStore.set(v);
     updateVisibleCharts(1000);
   });
 
@@ -79,6 +146,8 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     allCharts.forEach(function(chart) {
       mutateChart(chart, "time", e.detail.value);
     });
+    var v = {'step': XEnum.step, 'index': XEnum.index, 'wall_time': XEnum.wall_time, 'relative': XEnum.relative}[e.detail.value];
+    xStore.set(v);
     updateVisibleCharts(1000);
   });
 
@@ -109,37 +178,8 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
   // Render skeleton HTML
   //
 
-  interface RunTag {
-    run: string;
-    tag: string;
-  }
 
-  interface HCategory {
-    name: string;
-    runTags: RunTag[];
-  }
 
-  function histogramCategories(x: TF.Backend.RunsResponse): HCategory[] {
-    var enumerations = <TF.Backend.RunEnumeration[]> _.values(x);
-    var tags: string[][] = enumerations.map((e) => e.histograms);
-    var all_tags: string[] = _.union.apply(null, tags);
-    var categorizer = Categorizer.topLevelNamespaceCategorizer;
-    var categories = categorizer(all_tags);
-
-    var runNames = _.keys(x);
-    function tag2runtag(t: string): RunTag[] {
-      return runNames.filter((r) => {
-        return x[r].histograms.indexOf(t) !== -1;
-      }).map((r) => {return {tag: t, run: r}});
-    }
-
-    return categories.map((c) => {
-      return {
-        name: c.name,
-        runTags: _.flatten(c.tags.map(tag2runtag))
-      };
-    });
-  };
 
   backend.runs().then((x) => {
     data = histogramCategories(x);
